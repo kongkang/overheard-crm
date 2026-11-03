@@ -4,26 +4,226 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>线索 · Overheard</title>
 <style>
-body{font-family:sans-serif;margin:12px;max-width:720px}
-input,textarea,select,button{width:100%;margin:4px 0 8px;padding:8px;box-sizing:border-box}
-.card{border:1px solid #ccc;padding:10px;margin:10px 0}
-.muted{color:#666;font-size:13px}
-.row{display:flex;gap:8px} .row>*{flex:1}
-a{color:#06c}
+:root {
+  --bg: #f6f7f9;
+  --card: #fff;
+  --line: #e3e5ea;
+  --text: #1a1d23;
+  --muted: #6b7280;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --danger: #b91c1c;
+  --ok: #15803d;
+  --radius: 8px;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Noto Sans SC", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.45;
+  font-size: 14px;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.wrap { max-width: 900px; margin: 0 auto; padding: 12px 14px 40px; }
+.header {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 0 14px; border-bottom: 1px solid var(--line); margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.header h1 { margin: 0; font-size: 18px; font-weight: 650; }
+.header .meta { color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+button, .btn {
+  appearance: none; border: 1px solid var(--line); background: var(--card); color: var(--text);
+  border-radius: 6px; padding: 7px 12px; font-size: 13px; cursor: pointer;
+}
+button.primary, .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.primary:hover, .btn.primary:hover { background: var(--accent-hover); }
+button.linkish { border: none; background: transparent; color: var(--accent); padding: 4px 6px; }
+button.danger { color: var(--danger); }
+button:disabled { opacity: .55; cursor: not-allowed; }
+input, textarea, select {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px;
+  background: #fff; font: inherit; color: inherit;
+}
+textarea { min-height: 88px; resize: vertical; }
+label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+.field { margin-bottom: 2px; }
+.muted { color: var(--muted); font-size: 12px; }
+.err { color: var(--danger); font-size: 13px; margin-top: 8px; }
+.okmsg { color: var(--ok); font-size: 13px; margin-top: 8px; }
+.card {
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px; margin-bottom: 12px;
+}
+.toolbar { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; }
+.table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+table.leads { width: 100%; border-collapse: collapse; min-width: 640px; }
+table.leads th, table.leads td {
+  text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top;
+}
+table.leads th { font-size: 12px; color: var(--muted); font-weight: 600; background: #fafbfc; white-space: nowrap; }
+table.leads tr:last-child td { border-bottom: none; }
+table.leads tbody tr { cursor: pointer; }
+table.leads tbody tr:hover { background: #f3f6ff; }
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px;
+  background: #eef2ff; color: #3730a3; white-space: nowrap;
+}
+.badge.s-待回复 { background: #fff7ed; color: #9a3412; }
+.badge.s-已回复 { background: #eff6ff; color: #1d4ed8; }
+.badge.s-有意向 { background: #ecfdf5; color: #047857; }
+.badge.s-已转私信 { background: #f5f3ff; color: #6d28d9; }
+.badge.s-已关闭 { background: #f3f4f6; color: #4b5563; }
+.trunc { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.gate-box { max-width: 420px; margin: 48px auto; text-align: center; }
+.gate-box p { margin: 8px 0; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 640px) {
+  .row2 { grid-template-columns: 1fr; }
+  .trunc { max-width: 140px; }
+  table.leads { min-width: 520px; }
+}
+.empty { padding: 28px 12px; text-align: center; color: var(--muted); }
+.hidden { display: none !important; }
 </style>
 <body>
-<div id="gate"><p>需要外脑登录</p><button id="loginBtn">用外脑登录</button><p id="gateErr" class="muted"></p></div>
-<div id="app" style="display:none">
-  <p><b>线索</b> · <span id="who"></span> · <button id="logoutBtn" type="button">退出</button></p>
-  <div class="card">
-    <b>新增</b>
-    <input id="n_platform" placeholder="来源平台 如 X"/>
-    <input id="n_url" placeholder="帖子/评论链接"/>
-    <input id="n_who" placeholder="对方是谁"/>
-    <textarea id="n_need" placeholder="需求摘要"></textarea>
-    <button id="addBtn">保存</button>
+<div class="wrap">
+  <div id="gate" class="gate-box card">
+    <h1 style="margin:0 0 8px;font-size:20px">线索 · Overheard</h1>
+    <p class="muted">需要外脑登录后使用 CRM</p>
+    <p style="margin-top:16px"><button class="primary" id="loginBtn" type="button">用外脑登录</button></p>
+    <p id="gateErr" class="err"></p>
   </div>
-  <div id="list"></div>
+
+  <div id="app" class="hidden">
+    <div class="header">
+      <h1>线索 · Overheard</h1>
+      <div class="meta">
+        <span id="who"></span>
+        <button id="logoutBtn" type="button">退出</button>
+      </div>
+    </div>
+
+    <!-- LIST -->
+    <section id="view-list">
+      <div class="toolbar">
+        <div class="muted" id="listCount">—</div>
+        <button class="primary" id="newBtn" type="button">新增</button>
+      </div>
+      <div class="table-wrap">
+        <table class="leads">
+          <thead>
+            <tr>
+              <th>编号</th>
+              <th>状态</th>
+              <th>联系人</th>
+              <th>需求摘要</th>
+              <th>来源</th>
+              <th>更新</th>
+            </tr>
+          </thead>
+          <tbody id="listBody"></tbody>
+        </table>
+        <div id="listEmpty" class="empty hidden">暂无线索，点右上「新增」录入</div>
+      </div>
+    </section>
+
+    <!-- NEW -->
+    <section id="view-new" class="hidden">
+      <div class="toolbar">
+        <button class="linkish" id="newBackBtn" type="button">← 返回列表</button>
+        <b>新增线索</b>
+      </div>
+      <div class="card">
+        <div class="row2">
+          <div class="field">
+            <label>来源平台</label>
+            <input id="n_platform" placeholder="如 X / Twitter / 小红书" value="X"/>
+          </div>
+          <div class="field">
+            <label>联系人</label>
+            <input id="n_who" placeholder="对方是谁"/>
+          </div>
+        </div>
+        <div class="field">
+          <label>来源链接</label>
+          <input id="n_url" placeholder="帖子 / 评论链接"/>
+        </div>
+        <div class="field">
+          <label>需求摘要</label>
+          <textarea id="n_need" placeholder="对方在说什么、要什么"></textarea>
+        </div>
+        <div class="actions">
+          <button class="primary" id="addBtn" type="button">创建</button>
+          <button id="newCancelBtn" type="button">取消</button>
+        </div>
+        <p id="newMsg" class="err"></p>
+      </div>
+    </section>
+
+    <!-- DETAIL -->
+    <section id="view-detail" class="hidden">
+      <div class="toolbar">
+        <button class="linkish" id="detailBackBtn" type="button">← 返回列表</button>
+        <div>
+          <b id="d_lead_no">—</b>
+          <span class="muted" id="d_meta"></span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row2">
+          <div class="field">
+            <label>状态</label>
+            <select id="d_status"></select>
+          </div>
+          <div class="field">
+            <label>来源平台</label>
+            <input id="d_platform"/>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>联系人</label>
+            <input id="d_contact"/>
+          </div>
+          <div class="field">
+            <label>联系人账号 / Handle</label>
+            <input id="d_handle" placeholder="@handle（可选）"/>
+          </div>
+        </div>
+        <div class="field">
+          <label>来源链接</label>
+          <input id="d_url"/>
+          <p class="muted" id="d_url_open" style="margin:4px 0 0"></p>
+        </div>
+        <div class="field">
+          <label>需求摘要</label>
+          <textarea id="d_need"></textarea>
+        </div>
+        <div class="field">
+          <label>我们的回复</label>
+          <textarea id="d_our"></textarea>
+        </div>
+        <div class="field">
+          <label>对方回应</label>
+          <textarea id="d_their"></textarea>
+        </div>
+        <div class="field">
+          <label>备注</label>
+          <textarea id="d_note"></textarea>
+        </div>
+        <div class="actions">
+          <button class="primary" id="saveBtn" type="button">保存</button>
+          <button id="detailCancelBtn" type="button">返回列表</button>
+        </div>
+        <p id="detailMsg" class="okmsg"></p>
+      </div>
+    </section>
+  </div>
 </div>
 <script>
 const API = 'https://bvflzpbpoogfxuxkepso.supabase.co/functions/v1/overheard-crm';
@@ -31,12 +231,15 @@ const STATUSES = ["待回复","已回复","有意向","已转私信","已关闭"
 const KEY = 'overheard_crm_session';
 const $ = id => document.getElementById(id);
 
+let leadsCache = [];
+let currentUser = null;
+let currentLeadId = null;
+
 function getSession(){ return sessionStorage.getItem(KEY) || localStorage.getItem(KEY) || ''; }
 function setSession(t){
   if (!t) { sessionStorage.removeItem(KEY); localStorage.removeItem(KEY); return; }
   sessionStorage.setItem(KEY, t); localStorage.setItem(KEY, t);
 }
-// capture ?s= from OAuth redirect
 (function ingest(){
   const u = new URL(location.href);
   const s = u.searchParams.get('s');
@@ -57,63 +260,218 @@ async function api(path, opt={}) {
   if (!r.ok) throw new Error(j.error || r.statusText);
   return j;
 }
-function showGate(msg){ $('gate').style.display=''; $('app').style.display='none'; if(msg) $('gateErr').textContent=msg; }
+
+function showGate(msg){
+  $('gate').classList.remove('hidden');
+  $('app').classList.add('hidden');
+  if (msg) $('gateErr').textContent = msg;
+}
 function showApp(user){
-  $('gate').style.display='none'; $('app').style.display='block';
-  $('who').textContent = user.email || user.name || user.sub;
+  currentUser = user;
+  $('gate').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  $('who').textContent = user.email || user.name || user.sub || '';
 }
-function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
-function card(l){
-  return '<div class="card" data-id="'+l.id+'">'
-    + '<div><b>'+esc(l.lead_no)+'</b> · '+esc(l.status)+' · <span class="muted">'+esc(l.created_at||'')+'</span></div>'
-    + '<div>'+esc(l.contact_name||'')+' '+(l.source_url?('<a href="'+esc(l.source_url)+'" target="_blank" rel="noopener">来源</a>'):'')+'</div>'
-    + '<div class="muted">'+esc(l.need_summary||'')+'</div>'
-    + '<label>状态</label><select class="st">'+STATUSES.map(s=>'<option '+(s===l.status?'selected':'')+'>'+s+'</option>').join('')+'</select>'
-    + '<label>我们的回复</label><textarea class="our">'+esc(l.our_reply||'')+'</textarea>'
-    + '<label>对方回应</label><textarea class="their">'+esc(l.their_response||'')+'</textarea>'
-    + '<label>备注</label><textarea class="note">'+esc(l.note||l.followup_notes||'')+'</textarea>'
-    + '<button class="save">更新</button></div>';
+
+function esc(s){
+  return String(s??'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
-async function refresh(){
-  const d = await api('?action=list');
-  showApp(d.user);
-  $('list').innerHTML = (d.leads||[]).map(card).join('') || '<p class="muted">暂无线索</p>';
-  document.querySelectorAll('.card .save').forEach(btn=>{
-    btn.onclick = async ()=>{
-      const box = btn.closest('.card');
-      await api('?action=update', { method:'POST', body: JSON.stringify({
-        id: box.dataset.id,
-        status: box.querySelector('.st').value,
-        our_reply: box.querySelector('.our').value,
-        their_response: box.querySelector('.their').value,
-        note: box.querySelector('.note').value,
-      })});
-      await refresh();
-    };
+function trunc(s, n=48){
+  s = String(s??'');
+  return s.length > n ? s.slice(0, n) + '…' : s;
+}
+function fmtTime(iso){
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return String(iso).slice(0,16);
+    const p = (n)=>String(n).padStart(2,'0');
+    // Asia/Singapore display via locale offset of page; show compact local
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  } catch { return String(iso).slice(0,16); }
+}
+
+function parseRoute(){
+  const h = (location.hash || '#/').replace(/^#/, '');
+  const parts = h.split('/').filter(Boolean);
+  if (parts[0] === 'lead' && parts[1]) return { name: 'detail', id: decodeURIComponent(parts[1]) };
+  if (parts[0] === 'new') return { name: 'new' };
+  return { name: 'list' };
+}
+function go(hash){
+  if (location.hash === hash) { renderRoute(); return; }
+  location.hash = hash;
+}
+
+function showView(name){
+  ['list','new','detail'].forEach(v=>{
+    const el = $('view-'+v);
+    if (!el) return;
+    el.classList.toggle('hidden', v !== name);
   });
 }
+
+function renderList(){
+  showView('list');
+  const body = $('listBody');
+  const empty = $('listEmpty');
+  $('listCount').textContent = `共 ${leadsCache.length} 条`;
+  if (!leadsCache.length) {
+    body.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+  body.innerHTML = leadsCache.map(l=>{
+    const src = l.source_url
+      ? `<a href="${esc(l.source_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(l.source_platform||'来源')}</a>`
+      : esc(l.source_platform||'—');
+    const when = fmtTime(l.updated_at || l.created_at);
+    return `<tr data-id="${esc(l.id)}">
+      <td><b>${esc(l.lead_no||'')}</b></td>
+      <td><span class="badge s-${esc(l.status||'')}">${esc(l.status||'')}</span></td>
+      <td>${esc(l.contact_name||'—')}</td>
+      <td><div class="trunc" title="${esc(l.need_summary||'')}">${esc(trunc(l.need_summary||'—', 60))}</div></td>
+      <td>${src}</td>
+      <td class="muted">${esc(when)}</td>
+    </tr>`;
+  }).join('');
+  body.querySelectorAll('tr[data-id]').forEach(tr=>{
+    tr.onclick = () => go('#/lead/' + tr.dataset.id);
+  });
+}
+
+function fillStatusSelect(sel, value){
+  sel.innerHTML = STATUSES.map(s=>`<option value="${esc(s)}"${s===value?' selected':''}>${esc(s)}</option>`).join('');
+}
+
+function renderNew(){
+  showView('new');
+  $('newMsg').textContent = '';
+  $('newMsg').className = 'err';
+}
+
+function findLead(id){
+  return leadsCache.find(l => String(l.id) === String(id)) || null;
+}
+
+function renderDetail(id){
+  currentLeadId = id;
+  const l = findLead(id);
+  showView('detail');
+  $('detailMsg').textContent = '';
+  $('detailMsg').className = 'okmsg';
+  if (!l) {
+    $('d_lead_no').textContent = '未找到该线索';
+    $('d_meta').textContent = '';
+    return;
+  }
+  $('d_lead_no').textContent = l.lead_no || '';
+  $('d_meta').textContent = ` · 创建 ${fmtTime(l.created_at)} · 更新 ${fmtTime(l.updated_at||l.created_at)}`;
+  fillStatusSelect($('d_status'), l.status || '待回复');
+  $('d_platform').value = l.source_platform || '';
+  $('d_contact').value = l.contact_name || '';
+  $('d_handle').value = l.contact_handle || '';
+  $('d_url').value = l.source_url || '';
+  $('d_url_open').innerHTML = l.source_url
+    ? `<a href="${esc(l.source_url)}" target="_blank" rel="noopener">打开来源链接 ↗</a>`
+    : '';
+  $('d_need').value = l.need_summary || '';
+  $('d_our').value = l.our_reply || '';
+  $('d_their').value = l.their_response || '';
+  $('d_note').value = l.note || l.followup_notes || '';
+}
+
+function renderRoute(){
+  if (!$('app') || $('app').classList.contains('hidden')) return;
+  const r = parseRoute();
+  if (r.name === 'detail') renderDetail(r.id);
+  else if (r.name === 'new') renderNew();
+  else renderList();
+}
+
+async function refresh(keepRoute){
+  const d = await api('?action=list');
+  showApp(d.user);
+  leadsCache = d.leads || [];
+  if (!keepRoute && !location.hash) location.hash = '#/';
+  renderRoute();
+}
+
 $('loginBtn').onclick = ()=>{ location.href = API + '?action=login'; };
 $('logoutBtn').onclick = async ()=>{
   try { await api('?action=logout',{method:'POST',body:'{}'}); } catch(_){}
   setSession(''); showGate();
 };
+$('newBtn').onclick = ()=> go('#/new');
+$('newBackBtn').onclick = $('newCancelBtn').onclick = ()=> go('#/');
+$('detailBackBtn').onclick = $('detailCancelBtn').onclick = ()=> go('#/');
+
 $('addBtn').onclick = async ()=>{
-  await api('?action=create',{ method:'POST', body: JSON.stringify({
-    source_platform: $('n_platform').value.trim()||'X',
-    source_url: $('n_url').value.trim(),
-    contact_name: $('n_who').value.trim(),
-    need_summary: $('n_need').value.trim(),
-    status: '待回复',
-  })});
-  $('n_platform').value=''; $('n_url').value=''; $('n_who').value=''; $('n_need').value='';
-  await refresh();
+  $('newMsg').className = 'err';
+  $('newMsg').textContent = '';
+  $('addBtn').disabled = true;
+  try {
+    const res = await api('?action=create',{ method:'POST', body: JSON.stringify({
+      source_platform: $('n_platform').value.trim()||'X',
+      source_url: $('n_url').value.trim(),
+      contact_name: $('n_who').value.trim(),
+      need_summary: $('n_need').value.trim(),
+      status: '待回复',
+    })});
+    $('n_platform').value='X'; $('n_url').value=''; $('n_who').value=''; $('n_need').value='';
+    await refresh(true);
+    if (res.lead && res.lead.id) go('#/lead/' + res.lead.id);
+    else go('#/');
+  } catch(e) {
+    $('newMsg').textContent = '创建失败：' + (e.message||e);
+  } finally {
+    $('addBtn').disabled = false;
+  }
 };
+
+$('saveBtn').onclick = async ()=>{
+  if (!currentLeadId) return;
+  $('detailMsg').className = 'okmsg';
+  $('detailMsg').textContent = '保存中…';
+  $('saveBtn').disabled = true;
+  try {
+    const res = await api('?action=update', { method:'POST', body: JSON.stringify({
+      id: currentLeadId,
+      status: $('d_status').value,
+      source_platform: $('d_platform').value.trim(),
+      source_url: $('d_url').value.trim(),
+      contact_name: $('d_contact').value.trim(),
+      contact_handle: $('d_handle').value.trim(),
+      need_summary: $('d_need').value,
+      our_reply: $('d_our').value,
+      their_response: $('d_their').value,
+      note: $('d_note').value,
+    })});
+    const idx = leadsCache.findIndex(l => String(l.id) === String(currentLeadId));
+    if (idx >= 0 && res.lead) leadsCache[idx] = res.lead;
+    else await refresh(true);
+    renderDetail(currentLeadId);
+    $('detailMsg').textContent = '已保存';
+  } catch(e) {
+    $('detailMsg').className = 'err';
+    $('detailMsg').textContent = '保存失败：' + (e.message||e);
+  } finally {
+    $('saveBtn').disabled = false;
+  }
+};
+
+window.addEventListener('hashchange', renderRoute);
+
 const bootErr = new URL(location.href).searchParams.get('err');
 if (bootErr) {
   const u = new URL(location.href); u.searchParams.delete('err'); history.replaceState(null,'',u.pathname+u.search+u.hash);
   showGate('登录失败：'+bootErr);
-} else if (getSession()) refresh().catch(()=>showGate('登录已失效，请重新登录'));
-else showGate();
+} else if (getSession()) {
+  refresh().catch(()=>showGate('登录已失效，请重新登录'));
+} else {
+  showGate();
+}
 </script>
 </body>
 </html>
