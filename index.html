@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>线索 · Overheard</title>
+<style>
+body{font-family:sans-serif;margin:12px;max-width:720px}
+input,textarea,select,button{width:100%;margin:4px 0 8px;padding:8px;box-sizing:border-box}
+.card{border:1px solid #ccc;padding:10px;margin:10px 0}
+.muted{color:#666;font-size:13px}
+.row{display:flex;gap:8px} .row>*{flex:1}
+a{color:#06c}
+</style>
+<body>
+<div id="gate"><p>需要外脑登录</p><button id="loginBtn">用外脑登录</button><p id="gateErr" class="muted"></p></div>
+<div id="app" style="display:none">
+  <p><b>线索</b> · <span id="who"></span> · <button id="logoutBtn" type="button">退出</button></p>
+  <div class="card">
+    <b>新增</b>
+    <input id="n_platform" placeholder="来源平台 如 X"/>
+    <input id="n_url" placeholder="帖子/评论链接"/>
+    <input id="n_who" placeholder="对方是谁"/>
+    <textarea id="n_need" placeholder="需求摘要"></textarea>
+    <button id="addBtn">保存</button>
+  </div>
+  <div id="list"></div>
+</div>
+<script>
+const API = 'https://bvflzpbpoogfxuxkepso.supabase.co/functions/v1/overheard-crm';
+const STATUSES = ["待回复","已回复","有意向","已转私信","已关闭"];
+const KEY = 'overheard_crm_session';
+const $ = id => document.getElementById(id);
+
+function getSession(){ return sessionStorage.getItem(KEY) || localStorage.getItem(KEY) || ''; }
+function setSession(t){
+  if (!t) { sessionStorage.removeItem(KEY); localStorage.removeItem(KEY); return; }
+  sessionStorage.setItem(KEY, t); localStorage.setItem(KEY, t);
+}
+// capture ?s= from OAuth redirect
+(function ingest(){
+  const u = new URL(location.href);
+  const s = u.searchParams.get('s');
+  if (s) {
+    setSession(s);
+    u.searchParams.delete('s');
+    history.replaceState(null, '', u.pathname + u.search + u.hash);
+  }
+})();
+
+async function api(path, opt={}) {
+  const headers = {'content-type':'application/json', ...(opt.headers||{})};
+  const tok = getSession();
+  if (tok) headers['authorization'] = 'Bearer ' + tok;
+  const r = await fetch(API + path, { ...opt, headers, credentials:'omit' });
+  const j = await r.json().catch(()=>({}));
+  if (r.status === 401) { setSession(''); showGate(); throw new Error('unauthorized'); }
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+function showGate(msg){ $('gate').style.display=''; $('app').style.display='none'; if(msg) $('gateErr').textContent=msg; }
+function showApp(user){
+  $('gate').style.display='none'; $('app').style.display='block';
+  $('who').textContent = user.email || user.name || user.sub;
+}
+function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+function card(l){
+  return '<div class="card" data-id="'+l.id+'">'
+    + '<div><b>'+esc(l.lead_no)+'</b> · '+esc(l.status)+' · <span class="muted">'+esc(l.created_at||'')+'</span></div>'
+    + '<div>'+esc(l.contact_name||'')+' '+(l.source_url?('<a href="'+esc(l.source_url)+'" target="_blank" rel="noopener">来源</a>'):'')+'</div>'
+    + '<div class="muted">'+esc(l.need_summary||'')+'</div>'
+    + '<label>状态</label><select class="st">'+STATUSES.map(s=>'<option '+(s===l.status?'selected':'')+'>'+s+'</option>').join('')+'</select>'
+    + '<label>我们的回复</label><textarea class="our">'+esc(l.our_reply||'')+'</textarea>'
+    + '<label>对方回应</label><textarea class="their">'+esc(l.their_response||'')+'</textarea>'
+    + '<label>备注</label><textarea class="note">'+esc(l.note||l.followup_notes||'')+'</textarea>'
+    + '<button class="save">更新</button></div>';
+}
+async function refresh(){
+  const d = await api('?action=list');
+  showApp(d.user);
+  $('list').innerHTML = (d.leads||[]).map(card).join('') || '<p class="muted">暂无线索</p>';
+  document.querySelectorAll('.card .save').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const box = btn.closest('.card');
+      await api('?action=update', { method:'POST', body: JSON.stringify({
+        id: box.dataset.id,
+        status: box.querySelector('.st').value,
+        our_reply: box.querySelector('.our').value,
+        their_response: box.querySelector('.their').value,
+        note: box.querySelector('.note').value,
+      })});
+      await refresh();
+    };
+  });
+}
+$('loginBtn').onclick = ()=>{ location.href = API + '?action=login'; };
+$('logoutBtn').onclick = async ()=>{
+  try { await api('?action=logout',{method:'POST',body:'{}'}); } catch(_){}
+  setSession(''); showGate();
+};
+$('addBtn').onclick = async ()=>{
+  await api('?action=create',{ method:'POST', body: JSON.stringify({
+    source_platform: $('n_platform').value.trim()||'X',
+    source_url: $('n_url').value.trim(),
+    contact_name: $('n_who').value.trim(),
+    need_summary: $('n_need').value.trim(),
+    status: '待回复',
+  })});
+  $('n_platform').value=''; $('n_url').value=''; $('n_who').value=''; $('n_need').value='';
+  await refresh();
+};
+const bootErr = new URL(location.href).searchParams.get('err');
+if (bootErr) {
+  const u = new URL(location.href); u.searchParams.delete('err'); history.replaceState(null,'',u.pathname+u.search+u.hash);
+  showGate('登录失败：'+bootErr);
+} else if (getSession()) refresh().catch(()=>showGate('登录已失效，请重新登录'));
+else showGate();
+</script>
+</body>
+</html>
